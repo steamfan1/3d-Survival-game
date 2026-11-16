@@ -1,0 +1,54 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #bcd3e6; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #f4f1ea; }
+canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+.hidden { display: none !important; }
+
+#crosshair { position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); pointer-events: none; }
+#crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.6); }
+#crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+#crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
+
+#info { position: fixed; left: 12px; top: 10px; font-size: 14px; line-height: 1.45; text-shadow: 0 1px 2px rgba(0,0,0,.7); pointer-events: none; max-width: 46vw; }
+#info .dim { opacity: .8; font-size: 12px; }
+
+#drag { position: fixed; left: 50%; top: calc(50% + 28px); transform: translateX(-50%); background: rgba(20,24,28,.6); padding: 4px 10px; border-radius: 6px; font-size: 13px; display: none; pointer-events: none; white-space: nowrap; }
+#toast { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); background: rgba(20,24,28,.65); padding: 6px 14px; border-radius: 8px; font-size: 15px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+#toast.show { opacity: 1; }
+
+#bottom { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); text-align: center; pointer-events: none; }
+#tool { font-size: 13px; margin-bottom: 6px; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+#hotbar { display: flex; gap: 4px; justify-content: center; transition: opacity .2s; }
+#hotbar.dim { opacity: .35; }
+.slot { position: relative; width: 44px; height: 44px; background: rgba(20,24,28,.55); border: 2px solid rgba(255,255,255,.15); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.slot.active { border-color: #ffe08a; background: rgba(40,44,48,.75); }
+.slot .sw { width: 26px; height: 26px; border-radius: 3px; box-shadow: inset -4px -4px 0 rgba(0,0,0,.18), inset 3px 3px 0 rgba(255,255,255,.2); }
+.slot .num { position: absolute; left: 3px; top: 1px; font-size: 10px; opacity: .8; }
+
+#loading, #menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(28, 40, 34, .45); backdrop-filter: blur(2px); }
+#loading { background: linear-gradient(#7fa6c9, #b9d3e4); }
+.card { background: rgba(26, 30, 30, .86); border-radius: 14px; padding: 22px 28px; min-width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.card.wide { width: min(980px, 94vw); max-height: 92vh; overflow: auto; }
+.card h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: .5px; color: #ffe8a8; }
+.card .sub { margin: 0 0 14px; opacity: .85; }
+.card h3 { margin: 16px 0 8px; font-size: 15px; color: #ffe8a8; }
+.card h4 { margin: 10px 0 5px; font-size: 13px; opacity: .9; }
+.bar { height: 10px; background: rgba(255,255,255,.15); border-radius: 5px; overflow: hidden; margin-top: 10px; }
+#load-bar { height: 100%; width: 0; background: #9fd36a; transition: width .2s; }
+.err { background: rgba(60,20,20,.9); padding: 20px; border-radius: 12px; max-width: 520px; }
+
+.cols { display: grid; grid-template-columns: 1.1fr 1fr; gap: 26px; }
+@media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+table.keys { border-collapse: collapse; font-size: 13px; width: 100%; }
+table.keys td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,.07); }
+table.keys td:first-child { color: #ffe8a8; white-space: nowrap; }
+table.keys th { text-align: left; padding: 10px 6px 3px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .7; }
+
+button { font: inherit; border: 0; border-radius: 7px; padding: 6px 10px; background: rgba(255,255,255,.12); color: inherit; cursor: pointer; }
+button:hover { background: rgba(255,255,255,.22); }
+button.primary { background: #8cc35a; color: #13210c; font-weight: 700; padding: 10px 22px; font-size: 16px; }
+button.primary:hover { background: #a2d670; }
+button.danger { background: rgba(200,70,60,.35); margin-top: 10px; }
+#travel .row { display: flex; flex-wrap: wrap; gap: 5px; }
+#travel button { font-size: 12px; padding: 5px 8px; }
+label { display: block; font-size: 13px; margin: 6px 0; }
+input[type=range] { vertical-align: middle; width: 160px; }
