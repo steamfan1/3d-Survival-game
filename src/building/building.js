@@ -3,7 +3,7 @@
 // Blocks live on an integer centimetre lattice, so any grid size from 1 cm to 1 m
 // lines up with every other. A click-and-drag fills a whole rectangular region in
 // one go; it is stored as a single box (not millions of 1 cm cubes) and drawn with
-// shader grid lines so each individual block is still visible.
+// a procedural material texture (planks, brick, stone, ...) generated in the shader.
 //
 // Blocks are independent of the voxel terrain: they can be placed on top of it or
 // sunk inside it (foundations, posts, cellars), and terrain can be dug around them.
@@ -26,6 +26,9 @@ export const MATERIALS = [
   { name: 'Whitewash', color: [238, 236, 228] },
   { name: 'Mossy Stone', color: [104, 128, 92] },
 ];
+
+// Vertex "extra" byte for blocks: tells the shader which material texture and grid size to use.
+export const blockCode = (mat, g) => 1 + mat * 8 + g;
 
 const BUCKET = 3200; // cm (32 m), matches terrain chunks
 const MAX_SPAN_CM = 6400; // largest single drag: 64 m per axis
@@ -107,7 +110,7 @@ export class BuildSystem {
         const m = MATERIALS[b.mat];
         const v = 0.94 + hash3(b.x0, b.y0, b.z0) * 0.1;
         this.mb.box(b.x0 / 100, b.y0 / 100, b.z0 / 100, b.x1 / 100, b.y1 / 100, b.z1 / 100,
-          Math.min(255, m.color[0] * v), Math.min(255, m.color[1] * v), Math.min(255, m.color[2] * v), b.g + 1);
+          Math.min(255, m.color[0] * v), Math.min(255, m.color[1] * v), Math.min(255, m.color[2] * v), blockCode(b.mat, b.g));
       }
       bk.mesh.fromBuilder(this.mb);
     }
@@ -169,33 +172,56 @@ export class BuildSystem {
     return { cell, ax, sign: mode === 'place' && !(this.insideTerrain && !hit.isBlock) ? sign : -sign };
   }
 
+  // Scrap Mechanic-style stretching: the drag happens on whichever axis-aligned plane
+  // through the selection faces the camera best (with a bias towards the clicked face
+  // and some hysteresis). Looking down stretches across the floor, looking straight
+  // ahead stretches up a wall, so all three axes are reachable in one drag. The axis
+  // that is not in the current plane keeps whatever length it already had.
   beginDrag(hit, mode) {
     const a = this._anchor(hit, mode);
-    this.drag = { mode, ...a, cur: a.cell.slice(), depth: 1, gridIndex: this.gridIndex };
+    this.drag = { mode, cell: a.cell, faceAx: a.ax, sign: a.sign, ext: [0, 0, 0], plane: a.ax, gridIndex: this.gridIndex };
+  }
+
+  _choosePlane(d) {
+    const dr = this.drag;
+    const score = (i) => Math.abs(d[i]) + (i === dr.faceAx ? 0.3 : 0);
+    let best = dr.plane;
+    for (let i = 0; i < 3; i++) if (i !== best && score(i) > score(best) + 0.08) best = i;
+    dr.plane = best;
+  }
+
+  _constrain(i, c) {
+    const dr = this.drag;
+    const maxCells = Math.floor(MAX_SPAN_CM / GRID_CM[dr.gridIndex]) - 1;
+    c = Math.max(-maxCells, Math.min(maxCells, c));
+    // never grow back into the surface that was clicked
+    if (i === dr.faceAx) c = dr.sign > 0 ? Math.max(0, c) : Math.min(0, c);
+    return c;
   }
 
   updateDrag(o, d) {
     const dr = this.drag;
     if (!dr) return;
+    this._choosePlane(d);
     const g = GRID_CM[dr.gridIndex] / 100;
-    const ax = dr.ax;
-    const planeV = (dr.cell[ax] + 0.5) * g;
-    if (Math.abs(d[ax]) < 1e-5) return;
-    const t = (planeV - o[ax]) / d[ax];
-    if (t < 0 || t > 80) return;
-    const maxCells = Math.floor(MAX_SPAN_CM / GRID_CM[dr.gridIndex]);
+    const pa = dr.plane;
+    if (Math.abs(d[pa]) < 1e-4) return;
+    const planeV = (dr.cell[pa] + dr.ext[pa] + 0.5) * g;
+    const t = (planeV - o[pa]) / d[pa];
+    if (t <= 0 || t > 80) return;
     for (let i = 0; i < 3; i++) {
-      if (i === ax) continue;
-      let c = Math.floor((o[i] + d[i] * t) / g);
-      c = Math.max(dr.cell[i] - maxCells + 1, Math.min(dr.cell[i] + maxCells - 1, c));
-      dr.cur[i] = c;
+      if (i === pa) continue;
+      dr.ext[i] = this._constrain(i, Math.floor((o[i] + d[i] * t) / g) - dr.cell[i]);
     }
   }
 
+  // Scroll: lengthen / shorten the axis that points towards the camera.
   adjustDepth(delta) {
-    if (!this.drag) return false;
-    const maxCells = Math.floor(MAX_SPAN_CM / GRID_CM[this.drag.gridIndex]);
-    this.drag.depth = Math.max(1, Math.min(maxCells, this.drag.depth + delta));
+    const dr = this.drag;
+    if (!dr) return false;
+    const i = dr.plane;
+    const dir = i === dr.faceAx ? dr.sign : dr.ext[i] < 0 ? -1 : 1;
+    dr.ext[i] = this._constrain(i, dr.ext[i] + delta * dir);
     return true;
   }
 
@@ -204,14 +230,8 @@ export class BuildSystem {
     const gcm = GRID_CM[dr.gridIndex];
     const lo = [0, 0, 0], hi = [0, 0, 0];
     for (let i = 0; i < 3; i++) {
-      if (i === dr.ax) {
-        const end = dr.cell[i] + dr.sign * (dr.depth - 1);
-        lo[i] = Math.min(dr.cell[i], end);
-        hi[i] = Math.max(dr.cell[i], end);
-      } else {
-        lo[i] = Math.min(dr.cell[i], dr.cur[i]);
-        hi[i] = Math.max(dr.cell[i], dr.cur[i]);
-      }
+      lo[i] = Math.min(dr.cell[i], dr.cell[i] + dr.ext[i]);
+      hi[i] = Math.max(dr.cell[i], dr.cell[i] + dr.ext[i]);
     }
     return { x0: lo[0] * gcm, y0: lo[1] * gcm, z0: lo[2] * gcm, x1: (hi[0] + 1) * gcm, y1: (hi[1] + 1) * gcm, z1: (hi[2] + 1) * gcm };
   }
@@ -221,7 +241,8 @@ export class BuildSystem {
     const b = this._dragBoxCm();
     const g = GRID_CM[this.drag.gridIndex];
     const nx = (b.x1 - b.x0) / g, ny = (b.y1 - b.y0) / g, nz = (b.z1 - b.z0) / g;
-    return { nx, ny, nz, count: nx * ny * nz, size: [(b.x1 - b.x0) / 100, (b.y1 - b.y0) / 100, (b.z1 - b.z0) / 100] };
+    const axes = [0, 1, 2].filter((i) => i !== this.drag.plane).map((i) => 'XYZ'[i]).join(' · ');
+    return { nx, ny, nz, count: nx * ny * nz, axes, size: [(b.x1 - b.x0) / 100, (b.y1 - b.y0) / 100, (b.z1 - b.z0) / 100] };
   }
 
   endDrag() {
@@ -253,9 +274,26 @@ export class BuildSystem {
     }
     if (box) {
       const pad = 0.002;
-      const c = (this.drag ? this.drag.mode : mode) === 'place' ? MATERIALS[this.material].color : [230, 70, 60];
+      const placing = (this.drag ? this.drag.mode : mode) === 'place';
+      const c = placing ? MATERIALS[this.material].color : [230, 70, 60];
       this.previewMb.box(box.x0 / 100 - pad, box.y0 / 100 - pad, box.z0 / 100 - pad, box.x1 / 100 + pad, box.y1 / 100 + pad, box.z1 / 100 + pad,
-        c[0], c[1], c[2], g + 1);
+        c[0], c[1], c[2], placing ? blockCode(this.material, g) : 0);
+    }
+    if (this.drag) {
+      // axis guides through the start block: the two axes currently being stretched
+      const dr = this.drag;
+      const gm = GRID_CM[dr.gridIndex] / 100;
+      const th = Math.min(0.025, Math.max(0.003, gm * 0.12));
+      const ctr = dr.cell.map((c) => (c + 0.5) * gm);
+      const lo = [box.x0 / 100, box.y0 / 100, box.z0 / 100], hi = [box.x1 / 100, box.y1 / 100, box.z1 / 100];
+      const AX_COL = [[235, 80, 70], [110, 210, 90], [80, 145, 245]];
+      for (let i = 0; i < 3; i++) {
+        if (i === dr.plane) continue;
+        const a = ctr.map((v) => v - th), b = ctr.map((v) => v + th);
+        a[i] = lo[i] - 0.6; b[i] = hi[i] + 0.6;
+        const col = AX_COL[i];
+        this.previewMb.box(a[0], a[1], a[2], b[0], b[1], b[2], col[0], col[1], col[2], 0);
+      }
     }
     this.preview.fromBuilder(this.previewMb);
     return box;

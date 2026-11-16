@@ -35,8 +35,9 @@ The HUD shows your current region, biome and its typical wildlife. Animals thems
 
 ### Building (`src/building/`)
 - Grid sizes: **1 cm, 2 cm, 5 cm, 10 cm, 25 cm, 50 cm and 1 m**. All of them share one centimetre lattice, so they line up with each other.
-- **Click and drag** to fill a rectangle of blocks on the face you clicked. **Scroll while dragging** to extrude it into walls or slabs. Right-drag removes blocks; it cuts through placed boxes and splits them.
-- A drag is stored as one box, however many blocks it holds, so a 3 m × 3 m slab of 1 cm blocks is cheap. Shader grid lines still show every block.
+- **Scrap Mechanic-style stretching:** click a surface and drag. The blocks stretch along the axis-aligned plane that best faces your view, so you can reach all three axes in one drag. Look down to stretch across a floor, look ahead to pull it up into a wall, and turn sideways to switch again. The axis you're not looking along keeps its length, and coloured guide lines show which axes are active. Scroll while dragging to lengthen the axis pointing at you. Right-drag removes blocks the same way and splits placed boxes where it cuts through them.
+- A drag is stored as one box, however many blocks it holds, so a 3 m × 3 m slab of 1 cm blocks is cheap.
+- **Procedural material textures**, generated in the shader with no image files: staggered oak boards with grain and knots, stacked pine logs, irregular fieldstone in mortar, running-bond colonial brick (with the odd dark clinker), mottled clay plaster, layered thatch, staggered slate tiles, whitewashed boards and mossy stone. Each board, brick, stone and tile gets its own tint. Textures are at real-world scale, shrink a little for very fine blocks, and soften with distance.
 - **Blocks can sit inside the voxel terrain.** On terrain they sink slightly into the ground instead of floating. Press **V** to start the drag *inside* the surface for foundations, posts and cellars. You can dig terrain around blocks without affecting them.
 - Nine materials: oak planks, pine logs, fieldstone, colonial brick, clay plaster, thatch, slate, whitewash and mossy stone.
 - Placed blocks are saved in your browser (localStorage). Terrain edits are not saved yet.
@@ -49,9 +50,10 @@ The HUD shows your current region, biome and its typical wildlife. Animals thems
 | Space / Shift | Jump (swim up) / sprint |
 | F | Toggle fly mode (Space / C = up / down, Shift = fast) |
 | Q or Tab | Switch Build ↔ Terraform tool |
-| **Build:** left-drag | Place a rectangle of blocks |
-| Scroll while dragging | Extrude (thickness / wall height) |
-| Right-drag | Remove blocks |
+| **Build:** left-drag | Stretch blocks out from where you clicked |
+| Look while dragging | The stretch axis follows your view (down = floor, ahead = wall) |
+| Scroll while dragging | Lengthen the axis pointing at you |
+| Right-drag | Remove blocks the same way |
 | `[` `]` or `-` `=` | Grid size, 1 cm to 1 m |
 | 1–9 / scroll | Material |
 | V | Place on surface ↔ inside terrain |

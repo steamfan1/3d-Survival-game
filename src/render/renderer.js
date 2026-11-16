@@ -250,7 +250,6 @@ export class Renderer {
     gl.uniformMatrix4fv(p.u('u_viewProj'), false, this.viewProj);
     gl.uniformMatrix4fv(p.u('u_shadowMat'), false, this.shadowMat);
     gl.uniform1fv(p.u('u_gridSizes'), GRID_SIZES);
-    gl.uniform1f(p.u('u_lineStrength'), 0.28);
     this._setLightingUniforms(p, scene.camPos);
     gl.uniform1f(p.u('u_alpha'), 1);
     gl.uniform3f(p.u('u_tint'), 1, 1, 1);

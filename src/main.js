@@ -322,7 +322,7 @@ class Game {
     const dEl = $('drag');
     if (di) {
       dEl.style.display = 'block';
-      dEl.textContent = `${di.nx} × ${di.ny} × ${di.nz} = ${di.count.toLocaleString()} blocks   (${di.size.map((s) => s.toFixed(2)).join(' × ')} m)   scroll = depth`;
+      dEl.textContent = `${di.nx} × ${di.ny} × ${di.nz} = ${di.count.toLocaleString()} blocks   (${di.size.map((s) => s.toFixed(2)).join(' × ')} m)   ·   stretching ${di.axes} — look up/down/around to switch axis, scroll = 3rd axis`;
     } else dEl.style.display = 'none';
   }
 }
